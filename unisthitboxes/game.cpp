@@ -6,7 +6,7 @@ game game_data;
 
 game::PLAYER_DATA *game::players;
 game::list<game::CHARA_DATA> *game::object_list;
-game::vector<game::freeze_data> *game::freeze_list;
+std::vector<game::freeze_data> *game::freeze_list;
 game::camera_data *game::camera;
 game::grd_data *game::grds;
 game::timer_data *game::timers;
@@ -21,6 +21,14 @@ decltype(game::CreateObject) game::CreateObject;
 decltype(game::allocate) game::allocate;
 decltype(game::deallocate) game::deallocate;
 
+decltype(game::MainLoop) game::MainLoop;
+decltype(game::RenderChoice) game::RenderChoice;
+decltype(game::VSScreen) game::VSScreen;
+decltype(game::Controller) game::Controller;
+decltype(game::ControllerM) game::ControllerM;
+
+decltype(game::DisableGameControls1) game::DisableGameControls1;
+decltype(game::DisableGameControls2) game::DisableGameControls2;
 game::game()
 {
 	players = *(PLAYER_DATA**)(util::sigscan(
@@ -33,7 +41,7 @@ game::game()
 		"\x74\x29\x8B\x0D",
 		"xxxx") + 0x4);
 
-	freeze_list = *(vector<freeze_data>**)(util::sigscan(
+	freeze_list = *(std::vector<freeze_data>**)(util::sigscan(
 		"unist.exe",
 		"\xF7\xE9\x57\x0F\xB7\xBE",
 		"xxxxxx") - 0x4);
@@ -92,4 +100,20 @@ game::game()
 		"unist.exe",
 		"\x83\x7D\x08\x00\x74\x2D",
 		"xxxxxx") - 0x5);
+
+
+	MainLoop = (decltype(MainLoop))((uintptr_t)(util::get_base_address() + 0x1FC590));
+
+	RenderChoice = (decltype(RenderChoice))((uintptr_t)(util::get_base_address() + 0xB4CF0));
+
+	VSScreen = (decltype(VSScreen))((uintptr_t)(util::get_base_address() + 0x1887B0));
+
+	Controller = (decltype(Controller))((uintptr_t)(util::get_base_address() + 0xCC3A0));
+
+	ControllerM = (decltype(ControllerM))((uintptr_t)(util::get_base_address() + 0xCB283));
+	
+	DisableGameControls1 = (decltype(DisableGameControls1))((uintptr_t)(util::get_base_address() + 0x67B60));
+	DisableGameControls2 = (decltype(DisableGameControls2))((uintptr_t)(util::get_base_address() + 0x67BD0));
+	
+	
 }

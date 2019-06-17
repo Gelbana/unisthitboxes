@@ -3,8 +3,16 @@
 #include <Windows.h>
 #include <Psapi.h>
 
+
 namespace util
 {
+	//Return base address of program
+	uintptr_t get_base_address()
+	{
+
+		return (uintptr_t)GetModuleHandle(NULL);
+	}
+
 	// Get the start and end address of a loaded module. Returns success.
 	bool get_module_bounds(const char *name, uintptr_t *start, uintptr_t *end)
 	{
@@ -51,4 +59,22 @@ namespace util
 
 		return orig;
 	}
+
+	void pressJ()
+	{
+		INPUT ip;
+		ip.type = INPUT_KEYBOARD;
+		ip.ki.time = 0;
+		ip.ki.wScan = 0; //VK_RETURN is the code of Return key
+		ip.ki.wVk = 0x4A;
+
+		ip.ki.dwFlags = 0;
+
+		SendInput(1, &ip, sizeof(INPUT));
+		ip.ki.dwFlags = KEYEVENTF_KEYUP;
+		SendInput(1, &ip, sizeof(INPUT));
+
+	}
+
+
 }

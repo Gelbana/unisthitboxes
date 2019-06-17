@@ -2,10 +2,14 @@
 
 #include <string>
 #include <vector>
-
+#include <Windows.h>
+#include <deque>
 class game
 {
 public:
+	//Base address cause I don't know how to sigscan properly
+
+
 	// Object flags
 	static constexpr auto OF3_DORMANT = 0x400;
 
@@ -24,8 +28,10 @@ public:
 	class allocator
 	{
 	public:
-		using value_type = T;
 
+		using value_type = T;
+		allocator() = default;
+		template <class U> constexpr allocator(const allocator<U>&) noexcept {}
 		T *allocate(size_t n)
 		{
 			return (T*)(game::allocate(n));
@@ -35,12 +41,16 @@ public:
 		{
 			game::deallocate(p, n);
 		}
+
+		
 	};
 
 	// STL types with game's allocator
 	using string = std::basic_string<char, std::char_traits<char>, allocator<char>>;
 	template<typename T>
 	using vector = std::vector<T, allocator<T>>;
+
+	
 
 	template<typename T>
 	struct list_entry
@@ -314,7 +324,7 @@ public:
 
 	static PLAYER_DATA *players;
 	static list<CHARA_DATA> *object_list;
-	static vector<freeze_data> *freeze_list;
+	static std::vector<freeze_data> *freeze_list;
 	static camera_data *camera;
 	static grd_data *grds;
 	static timer_data *timers;
@@ -326,10 +336,20 @@ public:
 	static void(__thiscall *DeleteObject)(CHARA_DATA*);
 	static CHARA_DATA*(__thiscall *CreateObject)(create_object_info*);
 
+	static int(__fastcall* MainLoop) ();
+	static int(__fastcall*RenderChoice) (DWORD, int);
+	static signed int(__fastcall* VSScreen)();
+	static int(__fastcall* Controller)(int);
+	static unsigned int(__thiscall* ControllerM)(void*);
+
 	// Use the game's std::allocator functions to prevent heap corruption with STL types
 	static void*(*allocate)(size_t);
 	static void(*deallocate)(void*, size_t);
 
+	//Disable ingame direction and buttons
+	static int(__thiscall* DisableGameControls1)(void*, int); 
+	static int(__thiscall* DisableGameControls2)(void*, int);
+	
 	game();
 };
 
@@ -344,5 +364,7 @@ inline bool operator!=(const game::allocator<T> &a, const game::allocator<U> &b)
 {
 	return !(a == b);
 }
+
+
 
 extern game game_data;

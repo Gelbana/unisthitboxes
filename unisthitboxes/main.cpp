@@ -1,10 +1,17 @@
+#define _CRT_SECURE_NO_WARNINGS
+
 #include "util.h"
 #include "game.h"
 #include "graphics.h"
 #include "rollback.h"
+#include "Constants.h"
 #include <Windows.h>
 #include <d3d9.h>
 #include <detours.h>
+#include "input.h"
+
+
+ControllerManager controllers = ControllerManager();
 
 void draw_pushbox(IDirect3DDevice9 *device, const game::CHARA_DATA *object)
 {
@@ -143,6 +150,7 @@ int __fastcall hook_RunFrame(void *thisptr)
 	}
 	else if (GetAsyncKeyState(VK_F3) & 0x8000)
 	{
+
 		if (!pressed)
 		{
 			for (auto i = 0; i < 10; i++)
@@ -155,9 +163,150 @@ int __fastcall hook_RunFrame(void *thisptr)
 	{
 		pressed = false;
 	}
-
+	rollback.save_game_state();
+	
 	return orig_RunFrame(thisptr);
 }
+
+
+using RenderChoice_t = decltype(game::RenderChoice);
+RenderChoice_t orig_RenderChoice;
+int count = 0;
+
+int __fastcall hook_RenderChoice(DWORD t, int a) 
+{
+	int* f = (int*)(util::get_base_address() + SKIP_FRAME_FLAG);
+	static auto once = false;
+
+	if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+	{
+		if (!once)
+		{
+			
+
+			rollback.rollback_n(4);
+		
+			count = 4;
+		
+		}
+			
+		
+		once = true;
+	}
+	else 
+	{
+		once = false;
+	}
+
+
+	if (count > 0) 
+	{
+		count--;
+		*f = 0x2;
+	}
+	else
+	{
+		*f = 0x0;
+	}
+
+
+	
+	
+	return orig_RenderChoice(t, a);
+}
+
+using MainLoop_t = decltype(game::MainLoop);
+MainLoop_t orig_MainLoop;
+
+int __fastcall hook_MainLoop(void* t, void* nothing)
+{
+	int* game_state = (int*)(util::get_base_address() + GAME_STATE);
+	
+	controllers.updateInputs();
+	
+	if (*game_state == 2 || *game_state == 10 || *game_state == 3 || *game_state == 5)
+	{
+		int* world_timer = (int*)(util::get_base_address() + 0x2E6F40);
+		if (*world_timer % 3 == 0) 
+		{
+			*(int*)(util::get_base_address() + 0x323E04) = 4;
+		}
+		else
+		{
+			*(int*)(util::get_base_address() + 0x323E04) = 0;
+		}
+			
+		if (*game_state == 5) 
+		{
+			int* menuCursor = (int*)(util::get_base_address() + MAIN_MENU_STATE);
+			*menuCursor = 0x2;
+		}
+		int* f = (int*)(util::get_base_address() + SKIP_FRAME_FLAG);
+		*f = 0x2;
+	}
+
+	
+	return orig_MainLoop();
+}
+
+
+using VSScreen_t = decltype(game::MainLoop);
+VSScreen_t orig_VSScreen;
+
+signed int __fastcall hook_VSScreen()
+{
+	printf("Accessed");
+	return orig_VSScreen();
+}
+
+
+
+using Controller_t = decltype(game::Controller);
+Controller_t orig_Controller;
+
+//DIsable everywhere but retry and char select
+int __fastcall hook_Controller(int thing)
+{
+	int* game_state = (int*)(util::get_base_address() + GAME_STATE);
+	if (*game_state == 2 || *game_state == 22 || *game_state == 12) {
+		return orig_Controller(thing);
+	}
+	return 0;
+}
+
+using ControllerM_t = decltype(game::ControllerM);
+ControllerM_t orig_ControllerM;
+unsigned int __fastcall hook_ControllerM(void* th, void* nothing)
+{
+	return 0;
+}
+
+using DisableGameControls1_t = decltype(game::DisableGameControls1);
+DisableGameControls1_t orig_DisableGameControls1;
+int __fastcall hook_DisableGameControls1(void* th, void* nothing, int o)
+{
+	return 0;
+}
+
+using DisableGameControls2_t = decltype(game::DisableGameControls2);
+DisableGameControls2_t orig_DisableGameControls2;
+int __fastcall hook_DisableGameControls2(void* th, void* nothing, int o)
+{
+	return 0;
+}
+
+
+
+void disableGameControls()
+{
+	BYTE nop2[] = {0x90, 0x90};
+
+	memcpy((void*)(util::get_base_address() + 0x67BBF), &nop2, 2);
+	memcpy((void*)(util::get_base_address() + 0x67C4F), &nop2, 2);
+}
+
+
+
 
 BOOL WINAPI DllMain(
 	_In_ HINSTANCE hinstDLL,
@@ -174,9 +323,30 @@ BOOL WINAPI DllMain(
 		"\xC7\x06\x00\x00\x00\x00\x89\x86\x00\x00\x00\x00\x89\x86",
 		"xx????xx????xx") + 0x2);
 
+	
+	AllocConsole();
+	freopen("CONOUT$", "w", stdout);
+
+	controllers.initControllers();
+	//disableGameControls();
+
 	orig_EndScene = (EndScene_t)(DetourFunction((BYTE*)(dev_vtable[EndScene_idx]), (BYTE*)(hook_EndScene)));
 
-	//orig_RunFrame = (RunFrame_t)(DetourFunction((BYTE*)(game::RunFrame), (BYTE*)(hook_RunFrame)));
+	orig_RunFrame = (RunFrame_t)(DetourFunction((BYTE*)(game::RunFrame), (BYTE*)(hook_RunFrame)));
 
+
+	orig_MainLoop = (MainLoop_t)(DetourFunction((BYTE*)(game::MainLoop), (BYTE*)(hook_MainLoop)));
+
+	orig_RenderChoice = (RenderChoice_t)(DetourFunction((BYTE*)(game::RenderChoice), (BYTE*)(hook_RenderChoice)));
+
+	orig_VSScreen = (VSScreen_t)(DetourFunction((BYTE*)(game::VSScreen), (BYTE*)(hook_VSScreen)));
+
+	orig_Controller = (Controller_t)(DetourFunction((BYTE*)(game::Controller), (BYTE*)(hook_Controller)));
+	
+	//orig_ControllerM = (ControllerM_t)(DetourFunction((BYTE*)(game::ControllerM), (BYTE*)(hook_ControllerM)));
+
+
+	orig_DisableGameControls1 = (DisableGameControls1_t)(DetourFunction((BYTE*)(game::DisableGameControls1), (BYTE*)(hook_DisableGameControls1)));
+	orig_DisableGameControls2 = (DisableGameControls2_t)(DetourFunction((BYTE*)(game::DisableGameControls2), (BYTE*)(hook_DisableGameControls2)));
 	return TRUE;
 }

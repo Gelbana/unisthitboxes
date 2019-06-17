@@ -1,9 +1,11 @@
 #pragma once
 
+#include "Constants.h"
 #include "game.h"
 #include <vector>
 #include <numeric>
 #include <memory>
+#include <deque>
 
 class rollback_manager
 {
@@ -61,17 +63,26 @@ class rollback_manager
 		camera_state cam_interpolated;
 		camera_state cam_target;
 		game::timer_data timers;
-		game::vector<game::freeze_data> freezes;
+		std::vector<game::freeze_data> freezes;
+
 		grd_state grds[2];
 		object_state players[2];
 		std::vector<effect_state> effects;
+
 	};
 
+
+
+	static const int default_rollback = 10;
+	std::vector<frame_state> rollback_buffer;
+
+	void add_to_buffer();
+	
 	frame_state test_state;
 
 	static const std::vector<stored_field> object_fields;
 	static const size_t object_state_size;
-
+	
 	object_state save_object_state(const game::CHARA_DATA *object);
 	void load_object_state(game::CHARA_DATA *object, const object_state &state);
 
@@ -84,6 +95,8 @@ class rollback_manager
 public:
 	void save_game_state();
 	void load_game_state();
+
+	void rollback_n(int n);
 };
 
 extern rollback_manager rollback;

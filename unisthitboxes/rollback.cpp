@@ -4,6 +4,27 @@
 
 rollback_manager rollback;
 
+
+
+
+
+void rollback_manager::rollback_n(int n)
+{
+	for (int i = 0; i < n; i++) {
+		rollback_buffer.pop_back();
+	}
+	load_game_state();
+}
+
+void rollback_manager::add_to_buffer()
+{
+	if (rollback_buffer.size() >= 10)
+		rollback_buffer.erase(rollback_buffer.begin());
+
+
+	rollback_buffer.emplace_back(std::move(test_state));
+	//printf("%d\n", rollback_buffer.size());
+}
 const std::vector<rollback_manager::stored_field> rollback_manager::object_fields =
 {
 	&game::CHARA_DATA::state_block,
@@ -111,12 +132,16 @@ void rollback_manager::load_grd_state(game::grd_data *grd, const grd_state &stat
 
 void rollback_manager::save_game_state()
 {
+	
 	test_state.cam_interpolated = save_camera_state(&game::camera->interpolated);
 	test_state.cam_target = save_camera_state(&game::camera->target);
 
 	memcpy(&test_state.timers, game::timers, sizeof(game::timer_data));
 
+	
+	
 	test_state.freezes = *game::freeze_list;
+
 
 	test_state.grds[0] = save_grd_state(&game::grds[0]);
 	test_state.grds[1] = save_grd_state(&game::grds[1]);
@@ -125,6 +150,8 @@ void rollback_manager::save_game_state()
 	test_state.players[1] = save_object_state(&game::players[1]);
 
 	test_state.effects.clear();
+
+	//printf("%d\n", test_state.timers.game_time);
 
 	for (auto i = 2; i < game::object_list->count; i++)
 	{
@@ -148,22 +175,26 @@ void rollback_manager::save_game_state()
 
 		test_state.effects.push_back(std::move(effect));
 	}
+
+	add_to_buffer();
 }
 
 void rollback_manager::load_game_state()
 {
-	load_camera_state(&game::camera->interpolated, test_state.cam_interpolated);
-	load_camera_state(&game::camera->target, test_state.cam_target);
 
-	memcpy(game::timers, &test_state.timers, sizeof(game::timer_data));
+	
+	load_camera_state(&game::camera->interpolated, rollback_buffer.back().cam_interpolated);
+	load_camera_state(&game::camera->target, rollback_buffer.back().cam_target);
 
-	*game::freeze_list = test_state.freezes;
+	memcpy(game::timers, &rollback_buffer.back().timers, sizeof(game::timer_data));
 
-	load_grd_state(&game::grds[0], test_state.grds[0]);
-	load_grd_state(&game::grds[1], test_state.grds[1]);
+	*game::freeze_list = rollback_buffer.back().freezes;
 
-	load_object_state(&game::players[0], test_state.players[0]);
-	load_object_state(&game::players[1], test_state.players[1]);
+	load_grd_state(&game::grds[0], rollback_buffer.back().grds[0]);
+	load_grd_state(&game::grds[1], rollback_buffer.back().grds[1]);
+
+	load_object_state(&game::players[0], rollback_buffer.back().players[0]);
+	load_object_state(&game::players[1], rollback_buffer.back().players[1]);
 
 	for (auto i = 2; i < game::object_list->count; i++)
 	{
@@ -172,7 +203,7 @@ void rollback_manager::load_game_state()
 			game::DeleteObject(object);
 	}
 
-	for (auto &effect : test_state.effects)
+	for (auto &effect : rollback_buffer.back().effects)
 	{
 		game::create_object_info info = { 0 };
 		info.owner = &game::players[effect.owner_idx];
@@ -184,3 +215,6 @@ void rollback_manager::load_game_state()
 		load_object_state(object, effect.state);
 	}
 }
+
+
+
