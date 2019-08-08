@@ -26,9 +26,12 @@ decltype(game::RenderChoice) game::RenderChoice;
 decltype(game::VSScreen) game::VSScreen;
 decltype(game::Controller) game::Controller;
 decltype(game::ControllerM) game::ControllerM;
+decltype(game::GameTypeSelection) game::GameTypeSelection;
 
 decltype(game::DisableGameControls1) game::DisableGameControls1;
 decltype(game::DisableGameControls2) game::DisableGameControls2;
+decltype(game::SideCheck) game::SideCheck;
+
 game::game()
 {
 	players = *(PLAYER_DATA**)(util::sigscan(
@@ -111,9 +114,11 @@ game::game()
 	Controller = (decltype(Controller))((uintptr_t)(util::get_base_address() + 0xCC3A0));
 
 	ControllerM = (decltype(ControllerM))((uintptr_t)(util::get_base_address() + 0xCB283));
+	GameTypeSelection = (decltype(GameTypeSelection))((uintptr_t)(util::get_base_address() + 0xE6430));
 	
 	DisableGameControls1 = (decltype(DisableGameControls1))((uintptr_t)(util::get_base_address() + 0x67B60));
 	DisableGameControls2 = (decltype(DisableGameControls2))((uintptr_t)(util::get_base_address() + 0x67BD0));
 	
+	SideCheck = (decltype(SideCheck))((uintptr_t)(util::get_base_address() + 0x5FF60));
 	
 }

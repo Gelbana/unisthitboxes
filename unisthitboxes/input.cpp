@@ -162,6 +162,53 @@ int Controller::GetDirection()
 	return 0;
 }
 
+int Controller::GetReverseDirection()
+{
+	//CHANGE TO SWITCH
+	//Check diagonals first
+	if ((checkButton(XINPUT_GAMEPAD_DPAD_DOWN)) & (checkButton(XINPUT_GAMEPAD_DPAD_LEFT))) {
+		//printf("Pressing DownLeft\n");
+		return 3;
+	}
+
+	if ((checkButton(XINPUT_GAMEPAD_DPAD_DOWN)) & (checkButton(XINPUT_GAMEPAD_DPAD_RIGHT))) {
+		//printf("Pressing DownRight\n");
+		return 1;
+	}
+
+	if ((checkButton(XINPUT_GAMEPAD_DPAD_UP)) & (checkButton(XINPUT_GAMEPAD_DPAD_RIGHT))) {
+		//printf("Pressing UpRight\n");
+		return 7;
+	}
+
+	if ((checkButton(XINPUT_GAMEPAD_DPAD_UP)) & (checkButton(XINPUT_GAMEPAD_DPAD_LEFT))) {
+		//printf("Pressing UpLeft\n");
+		return 9;
+	}
+
+	if (checkButton(XINPUT_GAMEPAD_DPAD_DOWN)) {
+		//printf("Pressing Down\n");
+		return 2;
+	}
+
+	if (checkButton(XINPUT_GAMEPAD_DPAD_RIGHT)) {
+		//printf("Pressing Right\n");
+		return 4;
+	}
+
+	if (checkButton(XINPUT_GAMEPAD_DPAD_UP)) {
+		//printf("Pressing Up\n");
+		return 8;
+	}
+
+	if (checkButton(XINPUT_GAMEPAD_DPAD_LEFT)) {
+		//printf("Pressing Left\n");
+		return 6;
+	}
+
+	return 0;
+}
+
 ControllerManager::ControllerManager()
 {
 	localController = Controller();
@@ -177,9 +224,25 @@ void ControllerManager::updateInputs() {
 
 
 	localController.RefreshState();
+	if (invert == true) {
+		
+		*(uint8_t*)(util::get_base_address() + 0x61BC34) = localController.GetButton();
+		*(uint8_t*)(util::get_base_address() + 0x61BC37) = localController.GetReverseDirection();
+	}
+	else {
+		*(uint8_t*)(util::get_base_address() + 0x61BC34) = localController.GetButton();
+		*(uint8_t*)(util::get_base_address() + 0x61BC37) = localController.GetDirection();
+	}
+	
 
-	*(uint8_t*)(util::get_base_address() + 0x61BC34) = localController.GetButton();
-	*(uint8_t*)(util::get_base_address() + 0x61BC37) = localController.GetDirection();
+
+}
+
+void ControllerManager::invertDirection() {
+
+	invert = true;
+	
+
 
 
 }
@@ -189,8 +252,8 @@ void ControllerManager::updateInputs(int button, int direction) {
 
 	localController.RefreshState();
 	//printf("%d\n", localController.checkButton(XINPUT_GAMEPAD_A));
-	*(int*)(util::get_base_address() + 0x323E04) = button;
-	*(int*)(util::get_base_address() + 0x323DF0) = direction;
+	*(uint8_t*)(util::get_base_address() + 0x61BC34) = localController.GetButton();
+	*(uint8_t*)(util::get_base_address() + 0x61BC37) = direction;
 
 
 }

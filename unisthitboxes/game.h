@@ -350,6 +350,8 @@ public:
 	static int(__thiscall* DisableGameControls1)(void*, int); 
 	static int(__thiscall* DisableGameControls2)(void*, int);
 	
+	static signed int(__fastcall* GameTypeSelection) (int);
+	static unsigned int(__stdcall* SideCheck) (int);
 	game();
 };
 

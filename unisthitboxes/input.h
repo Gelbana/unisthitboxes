@@ -21,6 +21,8 @@ public:
 	bool checkDiagonal(WORD diag);
 
 	int GetDirection();
+	int GetReverseDirection();
+	
 	int GetButton();
 private:
 	XINPUT_STATE state;
@@ -32,11 +34,12 @@ private:
 class ControllerManager {
 public:
 	ControllerManager();
-
+	void invertDirection();
 	void initControllers();
 	void updateInputs();
 	void updateInputs(int, int);
 	//Wanted controller ids
 	int local = 0, remote = 1;
 	Controller localController;
+	bool invert = false;
 };

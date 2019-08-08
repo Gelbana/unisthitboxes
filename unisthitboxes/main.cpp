@@ -241,11 +241,22 @@ int __fastcall hook_MainLoop(void* t, void* nothing)
 			int* menuCursor = (int*)(util::get_base_address() + MAIN_MENU_STATE);
 			*menuCursor = 0x2;
 		}
+		
+		
+		
+		
 		int* f = (int*)(util::get_base_address() + SKIP_FRAME_FLAG);
 		*f = 0x2;
 	}
 
-	
+	//TODO Set player character based on selection
+	if (*game_state == 22) {
+		if (GetAsyncKeyState(VK_RETURN) & 0x8000) {
+
+		}
+		*(int*)(util::get_base_address() + 0x323F4C) = 5;
+		
+	}
 	return orig_MainLoop();
 }
 
@@ -285,6 +296,7 @@ using DisableGameControls1_t = decltype(game::DisableGameControls1);
 DisableGameControls1_t orig_DisableGameControls1;
 int __fastcall hook_DisableGameControls1(void* th, void* nothing, int o)
 {
+
 	return 0;
 }
 
@@ -292,9 +304,43 @@ using DisableGameControls2_t = decltype(game::DisableGameControls2);
 DisableGameControls2_t orig_DisableGameControls2;
 int __fastcall hook_DisableGameControls2(void* th, void* nothing, int o)
 {
+
 	return 0;
 }
 
+using GameTypeSelection_t = decltype(game::GameTypeSelection);
+GameTypeSelection_t orig_GameTypeSelection;
+int __fastcall hook_GameTypeSelection(void* th, void* nothing, int o)
+{
+	
+	//Always makes it 2 player controls
+	int i = orig_GameTypeSelection(o);
+	*(int*)(util::get_base_address() + 0x35FCD0) = 1;
+	return i;
+}
+
+using SideCheck_t = decltype(game::SideCheck);
+SideCheck_t orig_SideCheck;
+int limit = 1;
+unsigned int __stdcall hook_SideCheck(int o)
+{
+	
+	__asm pushad
+
+	printf("%d\n", o);
+	if (limit) {
+		
+		if (o == 0) {
+			controllers.invert = false;
+		}
+		else {
+			controllers.invertDirection();
+		}
+	}
+	limit ^= 1;
+	__asm popad
+	return  orig_SideCheck(o);
+}
 
 
 void disableGameControls()
@@ -343,8 +389,9 @@ BOOL WINAPI DllMain(
 
 	orig_Controller = (Controller_t)(DetourFunction((BYTE*)(game::Controller), (BYTE*)(hook_Controller)));
 	
+	orig_GameTypeSelection = (GameTypeSelection_t)(DetourFunction((BYTE*)(game::GameTypeSelection), (BYTE*)(hook_GameTypeSelection)));
 	//orig_ControllerM = (ControllerM_t)(DetourFunction((BYTE*)(game::ControllerM), (BYTE*)(hook_ControllerM)));
-
+	orig_SideCheck = (SideCheck_t)(DetourFunction((BYTE*)(game::SideCheck), (BYTE*)(hook_SideCheck)));
 
 	orig_DisableGameControls1 = (DisableGameControls1_t)(DetourFunction((BYTE*)(game::DisableGameControls1), (BYTE*)(hook_DisableGameControls1)));
 	orig_DisableGameControls2 = (DisableGameControls2_t)(DetourFunction((BYTE*)(game::DisableGameControls2), (BYTE*)(hook_DisableGameControls2)));
